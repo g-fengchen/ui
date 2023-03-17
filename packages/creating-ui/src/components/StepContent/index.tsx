@@ -1,6 +1,6 @@
 import React from 'react';
 import { map } from 'lodash';
-import { Icon } from '@alicloud/console-components';
+import { Icon, Button } from '@alicloud/console-components';
 import { Request } from '../../constants';
 import '../../index.less';
 
@@ -9,6 +9,7 @@ type Props = {
   isSuspend?: boolean;
   currentTask: Request;
   onRetry: () => void;
+  onResume: () => void;
   showRetry: boolean;
   isChild?: boolean;
 };
@@ -19,6 +20,7 @@ const StepContent = (props: Props) => {
     currentTask = {} as any,
     isSuspend,
     onRetry,
+    onResume,
     showRetry,
     isChild = false,
   } = props;
@@ -28,6 +30,15 @@ const StepContent = (props: Props) => {
         if (task.runStatus === 'finish')
           return (
             <div className={isChild ? 'color-success' : ''}> {task.successMsg || task.title} </div>
+          );
+        if (task.runStatus === 'pending')
+          return (
+            <div>
+              {task.title}
+              <span className="ml-8 cursor-pointer color-primary" onClick={onResume}>
+                继续执行
+              </span>
+            </div>
           );
         if (currentTask.key === task.key) {
           return (

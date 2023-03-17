@@ -2,7 +2,7 @@
 
 Demo:
 
-### 基本用法
+<!-- ### 基本用法
 
 ```tsx
 import React from 'react';
@@ -386,4 +386,165 @@ export default () => {
     />
   );
 };
+``` -->
+
+### 支持 任务等待
+
+```tsx
+import React from 'react';
+import '@alicloud/console-components/dist/wind.css';
+import CreatingUi from '@serverless-cd/creating-ui';
+import { Button } from '@alicloud/console-components';
+import { get } from 'lodash';
+
+export default () => {
+  const dataSource = [
+    {
+      title: '创建组织',
+      runStatus: 'wait',
+      key: 'createOrg',
+      runningMsg: '创建组织中...',
+      successMsg: '创建组织成功',
+      errorMsg: '创建组织失败',
+      run: async (params) => {
+        return await new Promise((resolve, reject) => {
+          setTimeout(() => {
+            resolve('createOrg');
+          }, 3000);
+        });
+      },
+    },
+    {
+      title: '部署环境',
+      runStatus: 'pending',
+      runningMsg: '部署中...',
+      successMsg: '部署成功',
+      errorMsg: '部署失败',
+      key: 'releaseEnv',
+      run: async (params) => {
+        console.log(params, 'params');
+        const { onTaskStop, content } = params;
+        return await new Promise((resolve, reject) => {
+          setTimeout(() => {
+            const success = get(params, 'content.createRelease.success', true);
+            // onTaskStop && onTaskStop();
+            // !success ? reject(33) : resolve(44);
+          }, 3000);
+        });
+      },
+    },
+    {
+      title: '创建成功，请前往详情页',
+      key: 'releaseEnv1',
+    },
+  ];
+
+  const onError = (value) => {
+    // console.log(value, 'Error 事件');
+  };
+
+  const onComplete = (value) => {
+    // console.log(value, 'Complete 事件');
+  };
+
+  const onCountdownComplete = () => {
+    console.log('CountdownComplete 事件 ----');
+    // window.open('https://www.baidu.com/');
+  };
+
+  return (
+    <CreatingUi
+      dataSource={dataSource}
+      onError={onError}
+      onComplete={onComplete}
+      countdown={3}
+      help={<span>测试测试</span>}
+      onCountdownComplete={onCountdownComplete}
+    />
+  );
+};
 ```
+
+<!--
+### 支持 子任务等待
+
+```tsx
+import React from 'react';
+import '@alicloud/console-components/dist/wind.css';
+import CreatingUi from '@serverless-cd/creating-ui';
+import { Button } from '@alicloud/console-components';
+import { get } from 'lodash';
+
+export default () => {
+  const dataSource = [
+    {
+      title: '创建组织',
+      runStatus: 'wait',
+      key: 'createOrg',
+      runningMsg: '创建组织中...',
+      successMsg: '创建组织成功',
+      errorMsg: '创建组织失败',
+      run: async (params) => {
+        return await new Promise((resolve, reject) => {
+          setTimeout(() => {
+            resolve('createOrg');
+          }, 3000);
+        });
+      },
+    },
+    {
+      title: '部署环境',
+      runStatus: 'wait',
+      key: 'releaseEnv',
+      tasks: [
+        {
+          key: 'createRelease',
+          title: '部署版本',
+          runningMsg: '部署中...',
+          successMsg: '部署成功',
+          errorMsg: '部署失败',
+          run: async (params) => {
+            console.log(params, 'params');
+            const { onTaskStop } = params;
+            return await new Promise((resolve, reject) => {
+              setTimeout(() => {
+                const success = get(params, 'content.createRelease.success', true);
+                onTaskStop && onTaskStop();
+                !success ? reject(33) : resolve(44);
+              }, 3000);
+            });
+          },
+        },
+      ],
+    },
+    {
+      title: '创建成功，请前往详情页',
+      key: 'releaseEnv1',
+    },
+  ];
+
+  const onError = (value) => {
+    // console.log(value, 'Error 事件');
+  };
+
+  const onComplete = (value) => {
+    // console.log(value, 'Complete 事件');
+  };
+
+  const onCountdownComplete = () => {
+    console.log('CountdownComplete 事件 ----');
+    // window.open('https://www.baidu.com/');
+  };
+
+  return (
+    <CreatingUi
+      dataSource={dataSource}
+      onError={onError}
+      onComplete={onComplete}
+      countdown={3}
+      help={<span>测试测试</span>}
+      onCountdownComplete={onCountdownComplete}
+    />
+  );
+};
+``` -->

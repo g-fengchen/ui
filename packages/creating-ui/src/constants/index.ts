@@ -20,4 +20,4 @@ export type Request = {
   run?: (content: any) => void;
 };
 
-type status = 'wait' | 'finish';
+type status = 'wait' | 'finish' | 'pending';

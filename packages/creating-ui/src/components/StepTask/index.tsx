@@ -10,22 +10,57 @@ type Props = {
   isSuspend?: boolean;
   count?: number;
   onRetry: () => void;
+  onResume: () => void;
   showRetry?: boolean;
 };
 const StepTask = (props: Props) => {
-  const { stepList, isSuspend, count, onRetry, showRetry } = props;
-  const { found, current, currentTask } = useMemo(() => {
-    const found: any = find(stepList, { runStatus: 'wait' });
-    const current = !isEmpty(found) ? found?.index : size(stepList);
-    const currentTask = find(found?.tasks, { runStatus: 'wait' });
-    return { current, currentTask, found };
-  }, [stepList]);
+  const { stepList, isSuspend, count, onRetry, showRetry, onResume } = props;
+  // console.log(stepList, 'stepList');
+  const getTaskOrParent = (list) => {
+    const found: any = find(list, { runStatus: 'wait' });
+    const foundPending: any = find(list, { runStatus: 'pending' });
+    const currentIndex = !isEmpty(foundPending)
+      ? foundPending?.index
+      : !isEmpty(found)
+      ? found?.index
+      : size(list);
+    const currentParent = !isEmpty(foundPending) ? foundPending : found;
+
+    const task = find(currentParent?.tasks, { runStatus: 'wait' });
+    const taskPending = find(currentParent?.tasks, { runStatus: 'pending' });
+
+    const currentTask = !isEmpty(taskPending) ? taskPending : task;
+    return { currentIndex, currentParent, currentTask };
+  };
+
+  const { currentParent, currentIndex, currentTask } = useMemo(
+    () => getTaskOrParent(stepList),
+    [stepList],
+  );
 
   const itemRender = (index, status) => {
     switch (status) {
       case 'process':
-        if (index === current && isSuspend)
+        if (index === currentIndex && isSuspend)
           return <Icon size="small" type="error" className="mt-3" />;
+        if (index === currentIndex && currentParent.runStatus === 'pending')
+          return (
+            <svg
+              viewBox="0 0 1024 1024"
+              version="1.1"
+              xmlns="http://www.w3.org/2000/svg"
+              p-id="5166"
+              width="20"
+              height="20"
+              className="mt-5"
+            >
+              <path
+                d="M512 917.381727c-223.886093 0-405.381727-181.495634-405.381727-405.381727S288.113907 106.618273 512 106.618273s405.381727 181.495634 405.381727 405.381727S735.886093 917.381727 512 917.381727zM528.21531 498.606968l0-278.482549-32.43062 0 0 291.834648-0.040932 0.040932 206.386534 206.386534 22.932292-22.932292L528.21531 498.606968z"
+                p-id="5167"
+                fill="#cccccc"
+              ></path>
+            </svg>
+          );
         return <Icon size="small" type="loading" className="mt-3" />;
       case 'finish':
         return <Icon size="small" type="success" className="mt-3" />;
@@ -49,9 +84,10 @@ const StepTask = (props: Props) => {
         );
     }
   };
+
   return (
     <div className="mt-16 application-container-step">
-      <Step itemRender={itemRender} current={current} direction="ver" animation={false}>
+      <Step itemRender={itemRender} current={currentIndex} direction="ver" animation={false}>
         {map(stepList, (item: Request, index) => {
           const tasks = get(item, 'tasks', []);
           return (
@@ -61,14 +97,17 @@ const StepTask = (props: Props) => {
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   <StepContent
                     tasks={[item]}
-                    currentTask={found}
+                    currentTask={currentParent}
                     isSuspend={isEmpty(tasks) ? isSuspend : false}
                     onRetry={onRetry}
+                    onResume={onResume}
                     showRetry={showRetry}
                   />
-                  {count !== 0 && index === size(stepList) - 1 && current === size(stepList) && (
-                    <>{count && <span className="color-error mr-8 ml-8">{`${count} s`}</span>}</>
-                  )}
+                  {count !== 0 &&
+                    index === size(stepList) - 1 &&
+                    currentIndex === size(stepList) && (
+                      <>{count && <span className="color-error mr-8 ml-8">{`${count} s`}</span>}</>
+                    )}
                 </div>
               }
               content={
@@ -78,6 +117,7 @@ const StepTask = (props: Props) => {
                   currentTask={currentTask}
                   isSuspend={isSuspend}
                   onRetry={onRetry}
+                  onResume={onResume}
                   showRetry={showRetry}
                 />
               }

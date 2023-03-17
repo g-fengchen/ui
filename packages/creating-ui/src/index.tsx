@@ -22,6 +22,7 @@ const CreatingUi = (props: Props, ref) => {
   const [count, setCount] = useState(countdown);
   let intervalCount = useRef(count);
   let interval = useRef(null);
+  let taskStopKey = useRef(null);
 
   useImperativeHandle(ref, () => ({
     onRetry,
@@ -36,18 +37,26 @@ const CreatingUi = (props: Props, ref) => {
 
   const save = async (values, params = {}) => {
     const found = find(values, { runStatus: 'wait' });
-    if (!isEmpty(found)) {
+    const foundPending = find(values, { runStatus: 'pending' });
+    if (!isEmpty(found) && isEmpty(foundPending)) {
       const task = find(found.tasks, { runStatus: 'wait' });
-      try {
-        const content: any = await onRunTask(!isEmpty(task) ? task : found, params);
-        setStepList([...values]);
-        setTaskContents(content);
-        await save([...values], content);
-      } catch (content) {
-        setIsSuspend(true);
-        setTaskContents(content);
-        onError && onError(content);
+      const taskPending = find(found.tasks, { runStatus: 'pending' });
+      if (!isEmpty(taskPending)) {
+        console.log(taskPending, 'taskPending');
+      } else {
+        try {
+          const content: any = await onRunTask(!isEmpty(task) ? task : found, params);
+          setStepList([...values]);
+          setTaskContents(content);
+          await save([...values], content);
+        } catch (content) {
+          setIsSuspend(true);
+          setTaskContents(content);
+          onError && onError(content);
+        }
       }
+    } else if (!isEmpty(foundPending)) {
+      console.log(111, '111');
     } else {
       onComplete && onComplete(params);
       intervalCount.current && onCountdown();
@@ -84,15 +93,37 @@ const CreatingUi = (props: Props, ref) => {
     retryType === 'all' ? onInit() : save(stepList, taskContents);
   };
 
+  // 继续执行事件
+  const onResume = () => {
+    const staskList = cloneDeep(stepList);
+    const currentParent = find(staskList, { runStatus: 'wait' });
+    const pendingParent = find(staskList, { runStatus: 'pending' });
+
+    const pendingTask = find(currentParent?.tasks, { runStatus: 'pending' });
+    if (!isEmpty(pendingParent)) {
+      pendingParent.runStatus = 'wait';
+    } else if (!isEmpty(pendingTask)) {
+      pendingTask.runStatus = 'wait';
+    }
+    setStepList([...staskList]);
+    save(staskList, taskContents);
+  };
+
   const onRunTask = async (task, content) => {
+    const onTaskStop = onStopped(task);
+
     return new Promise(async (resolve, reject) => {
       const newContent = cloneDeep(content);
       try {
         if (task.run) {
-          const result = await task?.run({ content: newContent });
+          const result = await task?.run({ content: newContent, onTaskStop });
           set(newContent, task.key, { result, success: true });
         }
-        task.runStatus = 'finish';
+        if (taskStopKey.current === task.key) {
+          task.runStatus = 'pending';
+        } else {
+          task.runStatus = 'finish';
+        }
         resolve(newContent);
       } catch (error) {
         set(newContent, task.key, { result: error, success: false });
@@ -104,6 +135,12 @@ const CreatingUi = (props: Props, ref) => {
   const initTasks = (value = []) => {
     if (isEmpty(value)) return [];
     return map(value, (item: Request) => ({ ...item, runStatus: item.runStatus || 'wait' }));
+  };
+
+  const onStopped = (task) => {
+    return () => {
+      taskStopKey.current = task.key;
+    };
   };
 
   return (
@@ -119,6 +156,7 @@ const CreatingUi = (props: Props, ref) => {
         isSuspend={isSuspend}
         count={count}
         onRetry={onRetry}
+        onResume={onResume}
         showRetry={showRetry}
       />
     </div>
